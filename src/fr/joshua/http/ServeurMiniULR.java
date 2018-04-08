@@ -1,11 +1,19 @@
 package fr.joshua.http;
 
+import javax.net.ServerSocketFactory;
+import javax.net.SocketFactory;
+import javax.net.ssl.*;
+import javax.security.cert.CertificateException;
 import javax.swing.text.html.MinimalHTMLWriter;
+import java.beans.JavaBean;
 import java.io.*;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.Security;
+import java.security.cert.X509Certificate;
 import java.util.Objects;
 
 /**
@@ -28,43 +36,68 @@ public class ServeurMiniULR{
     // Le serveur est en boucle infinie, et ne s'arrete que si il y aune
     // erreur d'Entree/Sortie. Il y a fermeture de socket apres chaque
     // requete.
-    public static void go (int port){
-	boolean stop = false;
+    public static void go (int port, int ssl_port){
 	Thread server = new Thread(new Runnable(){
 		public void run(){
 			ServerSocket srvk;
 			Integer id_server = nbSessions++;
 			try {
-			    srvk = new ServerSocket (port);
-			    while (!stop){
-                    System.out.println("Serveur en attente ("+ id_server +":"+ port +")");
-
-                    Socket sck = srvk.accept ();
-                    Thread client = new Thread(new Runnable(){
-                        @Override
-                        public void run() {
-                            DataOutputStream os = null;
-                            BufferedReader br = null;
-                            try {
-                                os = new DataOutputStream(sck.getOutputStream());
-                                br = new BufferedReader(new InputStreamReader(sck.getInputStream()));
-                                traiterRequete(br, os);
-                                sck.close();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }); // Thread client
-                    client.start();
-			    }
-			}catch(IOException e) {
+                srvk = new ServerSocket(port);
+                System.out.println("Serveur en attente ("+ id_server +":"+ port +")");
+                listen_server(srvk);
+            }catch(IOException e) {
 			    System.out.println("ERREUR IO"+ e);
 			}
 		} // run
 	}); //Thread server
+
+    Thread ssl_server = new Thread(new Runnable(){
+        public void run(){
+            System.setProperty("javax.net.ssl.keyStore", "lekeystore");
+            System.setProperty("javax.net.ssl.keyStorePassword", "lepassword");
+
+            ServerSocketFactory serverFactory = SSLServerSocketFactory.getDefault();
+            ServerSocket srvk;
+            Integer id_server = nbSessions++;
+            try {
+                srvk = serverFactory.createServerSocket(ssl_port);
+
+                System.out.println("Serveur en attente ("+ id_server +":"+ port +")");
+
+                listen_server(srvk);
+            }catch(IOException e) {
+                System.out.println("ERREUR IO"+ e);
+            }
+        } // run
+    }); //Thread server
+    ssl_server.start();
 	server.start();
 
     } // go
+
+    private static void listen_server(ServerSocket srvk) throws IOException {
+        boolean stop = false;
+        while (!stop){
+
+            Socket sck = srvk.accept();
+            Thread client = new Thread(new Runnable(){
+                @Override
+                public void run() {
+                    DataOutputStream os = null;
+                    BufferedReader br = null;
+                    try {
+                        os = new DataOutputStream(sck.getOutputStream());
+                        br = new BufferedReader(new InputStreamReader(sck.getInputStream()));
+                        traiterRequete(br, os);
+                        sck.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }); // Thread client
+            client.start();
+        }
+    }
 
     // Methode utile pour demander ou non des print de Trace a l'execution
     public static void debug(String s, int n) {
@@ -72,8 +105,7 @@ public class ServeurMiniULR{
             System.out.println("("+n+") - "+s);
     } // debug
 
-    public static String lireLigne(String p, BufferedReader br)
-            throws IOException {
+    public static String lireLigne(String p, BufferedReader br) throws IOException {
         String s ;
         s =br.readLine();
         debug(s,1);
@@ -84,7 +116,6 @@ public class ServeurMiniULR{
 
         String http = null;
         String method = null;
-        String host = null;
         String file = null;
         String line="";
          do{
@@ -92,13 +123,13 @@ public class ServeurMiniULR{
              if(line.startsWith("GET")){
                  method = "GET";
                  file = line.split(" ")[1];
+                 if(file.equals("/"))
+                     file = "/index.html";
                  http = line.split(" ")[2];
              }else if(line.startsWith("POST")){
                  method = "POST";
                  file = line.split(" ")[1];
                  http = line.split(" ")[2];
-             }else if(line.startsWith("Host")){
-                host = line.split(" ")[1];
              }
          }while (line.length() != 0 && !line.equals("\n\r"));
 
@@ -236,6 +267,6 @@ contentTypeLine, ....
     } // contentType
 
     public static void main (String args []) throws IOException {
-        go (1234);
+        go (1234, 4123);
     }
 }
