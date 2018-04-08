@@ -126,7 +126,7 @@ public class ServeurMiniULR{
             FileInputStream fis = new FileInputStream("."+ f);
             if(fis != null){
                 ServeurMiniULR.statusLine = "200";
-                ServeurMiniULR.contentTypeLine = "text/html";
+                ServeurMiniULR.contentTypeLine = contentType(f);
                 ServeurMiniULR.contentLengthLine = String.valueOf(fis.available());
 
                 entete(dos);
@@ -221,6 +221,16 @@ contentTypeLine, ....
         if (fileName.endsWith(".htm") ||
                 fileName.endsWith(".html")) {
             return "text/html";
+        }else if(fileName.endsWith(".css")){
+            return "text/css";
+        }else if(fileName.endsWith(".png")){
+            return "image/png";
+        }else if(fileName.endsWith(".jpg")){
+            return "image/jpg";
+        }else if(fileName.endsWith(".bmp")){
+            return "image/bmp";
+        }else if(fileName.endsWith(".gif")){
+            return "image/gif";
         }
         return "";
     } // contentType
