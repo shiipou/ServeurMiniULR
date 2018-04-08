@@ -46,9 +46,8 @@ public class ServeurMiniULR{
                             DataOutputStream os = null;
                             BufferedReader br = null;
                             try {
-                                os = new DataOutputStream(sck.getOutputStream ());
-                                br = new BufferedReader(new InputStreamReader
-                                        (sck.getInputStream()));
+                                os = new DataOutputStream(sck.getOutputStream());
+                                br = new BufferedReader(new InputStreamReader(sck.getInputStream()));
                                 traiterRequete(br, os);
                                 sck.close();
                             } catch (IOException e) {
@@ -70,60 +69,74 @@ public class ServeurMiniULR{
     // Methode utile pour demander ou non des print de Trace a l'execution
     public static void debug(String s, int n) {
         if ((DEBUG & n) != 0)
-            System.out.println("("+n+")"+s);
+            System.out.println("("+n+") - "+s);
     } // debug
 
     public static String lireLigne(String p, BufferedReader br)
             throws IOException {
         String s ;
         s =br.readLine();
-        debug(p+" "+s,2);
+        debug(s,1);
         return s;
     } // lireLigne
 
     public static void traiterRequete(BufferedReader br, DataOutputStream dos) throws IOException {
 
-
+        String http = null;
+        String method = null;
+        String host = null;
+        String file = null;
         String line="";
          do{
-             line = lireLigne(line,br);
+             line = lireLigne(line,br).trim();
              if(line.startsWith("GET")){
-                 if(contentType(line).equals("text/html")){
-                     retourFichier(line.split(" ")[1],dos);
-                 }
+                 method = "GET";
+                 file = line.split(" ")[1];
+                 http = line.split(" ")[2];
+             }else if(line.startsWith("POST")){
+                 method = "POST";
+                 file = line.split(" ")[1];
+                 http = line.split(" ")[2];
+             }else if(line.startsWith("Host")){
+                host = line.split(" ")[1];
              }
-             else if(line.startsWith("POST")){
-                 if(contentType(line).equals("text/html")){
-                     retourFichier(line.split(" ")[1],dos);
-                 }
-                 else{
-                     retourCGIPOST(line.split(" ")[1],br,dos);
-                 }
+         }while (line.length() != 0 && !line.equals("\n\r"));
+
+         if(http == null)
+             debug("NOT HTTP :(((", 3);
+         else if(method.equals("GET")) {
+             retourFichier(file, dos);
+         }else if(method.equals("POST")){
+             if(contentType(line).equals("text/html")){
+                 retourFichier(line.split(" ")[1],dos);
+             }else{
+                 retourCGIPOST(line.split(" ")[1],br,dos);
              }
-             else{
-                 System.out.println("NO HTTP :(((");
-             }
+         }else if(contentType(file).equals("text/html")){
+             retourFichier(file, dos);
          }
-         while (line.length() != 0 && !line.equals("\n\r"));
     } // traiterRequete
 
     private static void retourFichier(String f,DataOutputStream dos)
             throws IOException {
-        if(Files.exists(Paths.get(f))){
-            FileInputStream fis = new FileInputStream(f);
+
+        if(Files.exists(Paths.get("."+ f))){
+            debug(Paths.get("."+ f).toString(), 2);
+
+            FileInputStream fis = new FileInputStream("."+ f);
             if(fis != null){
                 ServeurMiniULR.statusLine = "200";
                 ServeurMiniULR.contentTypeLine = "text/html";
-//                ServeurMiniULR.
+                ServeurMiniULR.contentLengthLine = String.valueOf(fis.available());
 
+                entete(dos);
+                envoiFichier(fis, dos);
             }
-        }
-        else{
+        }else{
             ServeurMiniULR.statusLine = "404";
             ServeurMiniULR.contentLengthLine = "0";
             ServeurMiniULR.contentTypeLine = "text/html";
             entete(dos);
-
         }
 
 
@@ -142,7 +155,7 @@ conviennent
     private static void envoiFichier(FileInputStream fis,
                                      DataOutputStream os)
             throws IOException {
-        byte[] buffer = new byte[1024] ;
+        byte[] buffer = new byte[1024];
         int bytes = 0 ;
         while ((bytes = fis.read(buffer)) != -1 ) {
             os.write(buffer, 0, bytes);
@@ -193,6 +206,11 @@ contentTypeLine, ....
 
     private static void entete(DataOutputStream dos) throws
             IOException {
+        debug("statusLine: "+ statusLine, 5);
+        debug("serverLine: "+ serverLine, 5);
+        debug("contentTypeLine: "+ contentTypeLine, 5);
+        debug("contentLengthLine: "+ contentLengthLine, 5);
+
         envoi(statusLine+"\r\n",dos);
         envoi(serverLine+"\r\n",dos);
         envoi(contentTypeLine+"\r\n",dos);
@@ -210,6 +228,5 @@ contentTypeLine, ....
 
     public static void main (String args []) throws IOException {
         go (1234);
-        System.out.println("ARRET DU SERVEUR");
     }
 }
