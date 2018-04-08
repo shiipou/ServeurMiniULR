@@ -29,25 +29,41 @@ public class ServeurMiniULR{
     // erreur d'Entree/Sortie. Il y a fermeture de socket apres chaque
     // requete.
     public static void go (int port){
-        Socket sck;
-        ServerSocket srvk;
-        DataOutputStream os;
-        BufferedReader br;
-        try {
-            srvk = new ServerSocket (port);
-            while (true){
-                System.out.println("Serveur en attente "+(nbSessions++));
-                sck = srvk.accept ();
-                os = new DataOutputStream (sck.getOutputStream ());
-                br = new BufferedReader(new InputStreamReader
-                        (sck.getInputStream()));
-                traiterRequete(br, os);
-                sck.close();
-            }
-        }
-        catch (IOException e) {
-            System.out.println("ERREUR IO"+ e);
-        }
+	boolean stop = false;
+	Thread server = new Thread(new Runnable(){
+		public void run(){
+			ServerSocket srvk;
+			Integer id_server = nbSessions++;
+			try {
+			    srvk = new ServerSocket (port);
+			    while (!stop){
+                    System.out.println("Serveur en attente ("+ id_server +":"+ port +")");
+
+                    Socket sck = srvk.accept ();
+                    Thread client = new Thread(new Runnable(){
+                        @Override
+                        public void run() {
+                            DataOutputStream os = null;
+                            BufferedReader br = null;
+                            try {
+                                os = new DataOutputStream(sck.getOutputStream ());
+                                br = new BufferedReader(new InputStreamReader
+                                        (sck.getInputStream()));
+                                traiterRequete(br, os);
+                                sck.close();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }); // Thread client
+                    client.start();
+			    }
+			}catch(IOException e) {
+			    System.out.println("ERREUR IO"+ e);
+			}
+		} // run
+	}); //Thread server
+	server.start();
 
     } // go
 
@@ -98,7 +114,7 @@ public class ServeurMiniULR{
             if(fis != null){
                 ServeurMiniULR.statusLine = "200";
                 ServeurMiniULR.contentTypeLine = "text/html";
-                ServeurMiniULR.
+//                ServeurMiniULR.
 
             }
         }
