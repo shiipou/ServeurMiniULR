@@ -88,7 +88,7 @@ public class ServeurMiniULR{
         String file = null;
         String line="";
          do{
-             line = lireLigne(line,br).trim();
+             line = lireLigne(line,br);
              if(line.startsWith("GET")){
                  method = "GET";
                  file = line.split(" ")[1];
@@ -211,10 +211,9 @@ contentTypeLine, ....
         debug("contentTypeLine: "+ contentTypeLine, 5);
         debug("contentLengthLine: "+ contentLengthLine, 5);
 
-        envoi(statusLine+"\r\n",dos);
-        envoi(serverLine+"\r\n",dos);
-        envoi(contentTypeLine+"\r\n",dos);
-        envoi(contentLengthLine+"\r\n",dos);
+        envoi("HTTP/1.1 " + statusLine+" OK\r\n",dos);
+        envoi("Content-Type: "+ contentTypeLine+"\r\n",dos);
+        envoi("Content-Length: "+ contentLengthLine+"\r\n",dos);
         envoi("\r\n",dos);
     } // entete
 
