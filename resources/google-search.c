@@ -1,25 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-int main(){
+int main(int argc, const char* argv[]){
 
-	fprintf(stdout, "Content-type: text/html\n");
-	fprintf(stdout, "Location: https://www.google.fr/search?q=");
+	fprintf(stdout, "HTTP/1.1 302 OK\r\n");
+	fprintf(stdout, "Content-type: text/html\r\n");
+	fprintf(stdout, "Location: https://www.google.fr/search?q=%s\r\n\r\n", argv[1]);
 
-	char t;
-    unsigned int req = 0;
-
-	while((t = getc(stdin)) != '\n' && t != EOF){
-        if(req == 2)
-		    fprintf(stdout, "%c", t);
-
-	    if(t == 'q')
-            req = 1;
-
-        if(req == 1)
-            if(t == '=')
-                req = 2;
-	}
-	fprintf(stdout, "\n\n");
 	return 0;
 }

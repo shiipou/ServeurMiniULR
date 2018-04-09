@@ -111,12 +111,19 @@ public class ServeurMiniULR{
         String http = null;
         String method = null;
         String file = null;
+        String get = null;
         String line="";
+        BufferedReader send = null;
          do{
              line = lireLigne(line,br);
              if(line.startsWith("GET")){
                  method = "GET";
                  file = line.split(" ")[1];
+                 if(file.contains("?")){
+                     get = file.split("\\?")[1];
+                     file = file.split("\\?")[0];
+                 }
+
                  if(file.equals("/"))
                      file = "/index.html";
                  http = line.split(" ")[2];
@@ -130,9 +137,15 @@ public class ServeurMiniULR{
          if(http == null)
              debug("NOT HTTP :(((", 3);
          else if(method.equals("GET")) {
-             retourFichier(file, dos);
+             if(contentType(file).equals("exe/cgi"))
+                retourCGIPOST(file,br,dos);
+             else
+                retourFichier(file, dos);
          }else if(method.equals("POST")){
-             retourCGIPOST(file,br,dos);
+             if(contentType(file).equals("exe/cgi"))
+                 retourCGIPOST(file,br,dos);
+             else
+                 retourFichier(file, dos);
          }else if(contentType(file).equals("text/html")){
              retourFichier(file, dos);
          }
@@ -141,10 +154,10 @@ public class ServeurMiniULR{
     private static void retourFichier(String f,DataOutputStream dos)
             throws IOException {
 
-        if(Files.exists(Paths.get("./ressources"+ f))){
-            debug(Paths.get("./ressources"+ f).toString(), 2);
+        if(Files.exists(Paths.get("./resources"+ f))){
+            debug(Paths.get("./resources"+ f).toString(), 2);
 
-            FileInputStream fis = new FileInputStream("./ressources"+ f);
+            FileInputStream fis = new FileInputStream("./resources"+ f);
             if(fis != null){
                 ServeurMiniULR.statusLine = "200";
                 ServeurMiniULR.contentTypeLine = contentType(f);
@@ -185,16 +198,21 @@ conviennent
     } // envoiFichier
 
     private static String executer(String f) throws IOException, InterruptedException {
-        String R = "";
+        StringBuilder R = new StringBuilder();
         if(Files.exists(Paths.get("./resources"+ f))) {
             Runtime rt = Runtime.getRuntime();
             Process cgi = rt.exec("./resources" + f);
-            InputStream out = cgi.getInputStream();
+            BufferedReader out = new BufferedReader(new InputStreamReader(cgi.getInputStream()));
+            DataOutputStream in = new DataOutputStream(cgi.getOutputStream());
 
-            cgi.waitFor();
+            //in.writeBytes(input);
+            //in.flush();
 
-            R = new String(out.readAllBytes());
-            debug(R, 7);
+            String line = "";
+            while((line = out.readLine()) != null) {
+                R.append(line);
+            }
+            debug(R.toString(), 7);
         }else throw new IOException("No CGI files");
 
         /*
@@ -204,13 +222,37 @@ conviennent
          Toutes ces lignes sont accumulees dans une chaine qui
          est retournee en fin d'execution.
          */
-        return R;
+        return R.toString();
     } // executer
 
 
+    private static void retourCGIGET(String f, String get, DataOutputStream dos) throws IOException {
+
+        StringBuilder res = null;
+        String line;
+
+        Runtime rt = Runtime.getRuntime();
+        Process cgi = rt.exec("./resources" + f);
+        BufferedReader out = new BufferedReader(new InputStreamReader(cgi.getInputStream()));
+
+        while((line = out.readLine()) != null) {
+            res.append(line);
+        }
+
+        envoi(res.toString(), dos);
+    }
+
     private static void retourCGIPOST(String f, BufferedReader br, DataOutputStream dos) throws IOException {
 
-        String res = null;
+        String res = null,
+               line;
+        StringBuilder input = new StringBuilder();
+
+        while((line = br.readLine()) != null) {
+            debug(line, 8);
+            input.append(line);
+        }
+
         try {
             res = executer(f);
         } catch (InterruptedException e) {
