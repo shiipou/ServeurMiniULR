@@ -1,20 +1,14 @@
 package fr.joshua.http;
 
-import javax.net.ServerSocketFactory;
-import javax.net.SocketFactory;
-import javax.net.ssl.*;
-import javax.security.cert.CertificateException;
-import javax.swing.text.html.MinimalHTMLWriter;
-import java.beans.JavaBean;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
 import java.io.*;
-import java.net.InetAddress;
+import java.net.Authenticator;
+import java.net.PasswordAuthentication;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.Security;
-import java.security.cert.X509Certificate;
-import java.util.Objects;
 
 /**
  * Created by joshu on 31/01/2018.
@@ -37,42 +31,42 @@ public class ServeurMiniULR{
     // erreur d'Entree/Sortie. Il y a fermeture de socket apres chaque
     // requete.
     public static void go (int port, int ssl_port){
-	Thread server = new Thread(new Runnable(){
-		public void run(){
-			ServerSocket srvk;
-			Integer id_server = nbSessions++;
-			try {
-                srvk = new ServerSocket(port);
-                System.out.println("Serveur en attente ("+ id_server +":"+ port +")");
-                listen_server(srvk);
-            }catch(IOException e) {
-			    System.out.println("ERREUR IO"+ e);
-			}
-		} // run
-	}); //Thread server
+        Thread server = new Thread(new Runnable(){
+            public void run(){
+                ServerSocket srvk;
+                Integer id_server = nbSessions++;
+                try {
+                    srvk = new ServerSocket(port);
+                    System.out.println("Serveur en attente ("+ id_server +":"+ port +")");
+                    listen_server(srvk);
+                }catch(IOException e) {
+                    System.out.println("ERREUR IO"+ e);
+                }
+            } // run
+        }); //Thread server
 
-    Thread ssl_server = new Thread(new Runnable(){
-        public void run(){
-            System.setProperty("javax.net.ssl.keyStore", "lekeystore");
-            System.setProperty("javax.net.ssl.keyStorePassword", "lepassword");
+        Thread ssl_server = new Thread(new Runnable(){
 
-            ServerSocketFactory serverFactory = SSLServerSocketFactory.getDefault();
-            ServerSocket srvk;
-            Integer id_server = nbSessions++;
-            try {
-                srvk = serverFactory.createServerSocket(ssl_port);
+            public void run(){
 
-                System.out.println("Serveur en attente ("+ id_server +":"+ port +")");
+                Integer id_server = nbSessions++;
+                try {
+                    java.security.Security.addProvider(new com.sun.net.ssl.internal.ssl.Provider());
+                    System.setProperty("java.protocol.handler.pkgs", "com.sun.net.ssl.internal.www.protocol");
 
-                listen_server(srvk);
-            }catch(IOException e) {
-                System.out.println("ERREUR IO"+ e);
-            }
-        } // run
-    }); //Thread server
-    ssl_server.start();
-	server.start();
+                    SSLServerSocketFactory sslServerSocketFactory = (SSLServerSocketFactory)SSLServerSocketFactory.getDefault();
+                    SSLServerSocket srvk = (SSLServerSocket)sslServerSocketFactory.createServerSocket(ssl_port);
 
+                    System.out.println("Serveur en attente ("+ id_server +":"+ ssl_port +")");
+
+                    listen_server(srvk);
+                }catch(IOException e) {
+                    System.out.println("ERREUR IO"+ e);
+                }
+            } // run
+        }); //Thread server
+        server.start();
+        ssl_server.start();
     } // go
 
     private static void listen_server(ServerSocket srvk) throws IOException {
