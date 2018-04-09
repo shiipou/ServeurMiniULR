@@ -132,11 +132,7 @@ public class ServeurMiniULR{
          else if(method.equals("GET")) {
              retourFichier(file, dos);
          }else if(method.equals("POST")){
-             if(contentType(line).equals("text/html")){
-                 retourFichier(line.split(" ")[1],dos);
-             }else{
-                 retourCGIPOST(line.split(" ")[1],br,dos);
-             }
+             retourCGIPOST(file,br,dos);
          }else if(contentType(file).equals("text/html")){
              retourFichier(file, dos);
          }
@@ -145,10 +141,10 @@ public class ServeurMiniULR{
     private static void retourFichier(String f,DataOutputStream dos)
             throws IOException {
 
-        if(Files.exists(Paths.get("."+ f))){
-            debug(Paths.get("."+ f).toString(), 2);
+        if(Files.exists(Paths.get("./ressources"+ f))){
+            debug(Paths.get("./ressources"+ f).toString(), 2);
 
-            FileInputStream fis = new FileInputStream("."+ f);
+            FileInputStream fis = new FileInputStream("./ressources"+ f);
             if(fis != null){
                 ServeurMiniULR.statusLine = "200";
                 ServeurMiniULR.contentTypeLine = contentType(f);
@@ -188,49 +184,61 @@ conviennent
         envoi("\r\n",os);
     } // envoiFichier
 
-    private static String executer(String f) throws IOException {
+    private static String executer(String f) throws IOException, InterruptedException {
         String R = "";
- /*
- Lance l'execution de la commande "f", et lit toutes les lignes
- qui lui sont retournees par l'execution de cette commande. On
- lit ligne ‡ ligne jusqu'a avoir une valeur de chaine null.
- Toutes ces lignes sont accumulees dans une chaine qui
- est retournee en fin d'execution.
- */
+        if(Files.exists(Paths.get("./resources"+ f))) {
+            Runtime rt = Runtime.getRuntime();
+            Process cgi = rt.exec("./resources" + f);
+            InputStream out = cgi.getInputStream();
+
+            cgi.waitFor();
+
+            R = new String(out.readAllBytes());
+            debug(R, 7);
+        }else throw new IOException("No CGI files");
+
+        /*
+         Lance l'execution de la commande "f", et lit toutes les lignes
+         qui lui sont retournees par l'execution de cette commande. On
+         lit ligne ‡ ligne jusqu'a avoir une valeur de chaine null.
+         Toutes ces lignes sont accumulees dans une chaine qui
+         est retournee en fin d'execution.
+         */
         return R;
     } // executer
 
 
-    private static void retourCGIPOST(String f, BufferedReader br,
-                                      DataOutputStream dos)
-            throws IOException {
- /*
- On lit toutes les lignes jusqu'a trouver une ligne commencant
-par Content-Length
- Lorsque cette ligne est trouvee, on extrait le nombre qui suit
-(nombre
- de caracteres a lire).
- On lit une ligne vide
- On lit les caracteres dont le nombre a ete trouve ci-dessus
- on les range dans une chaine,
- On appelle la methode 'executer' en lui donnant comme
-parametre
+    private static void retourCGIPOST(String f, BufferedReader br, DataOutputStream dos) throws IOException {
 
-une chaine qui est la concatenation du nom de fichier, d'un
-espace
- et de la chaine de parametres.
- 'executer' retourne une chaine qui est la reponse ‡ renvoyer
- au client, apres avoir envoye les infos status,
-contentTypeLine, ....
- */
+        String res = null;
+        try {
+            res = executer(f);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        envoi(res, dos);
+     /*
+     On lit toutes les lignes jusqu'a trouver une ligne commencant
+    par Content-Length
+     Lorsque cette ligne est trouvee, on extrait le nombre qui suit
+    (nombre
+     de caracteres a lire).
+     On lit une ligne vide
+     On lit les caracteres dont le nombre a ete trouve ci-dessus
+     on les range dans une chaine,
+     On appelle la methode 'executer' en lui donnant comme
+     parametre une chaine qui est la concatenation du nom de fichier, d'un
+     espace et de la chaine de parametres.
+     'executer' retourne une chaine qui est la reponse ‡ renvoyer
+     au client, apres avoir envoye les infos status,
+    contentTypeLine, ....
+     */
     }
-    private static void envoi(String m, DataOutputStream dos)
-            throws IOException {
+    private static void envoi(String m, DataOutputStream dos) throws IOException {
         dos.write(m.getBytes());
     } //envoi
 
-    private static void entete(DataOutputStream dos) throws
-            IOException {
+    private static void entete(DataOutputStream dos) throws IOException {
         debug("statusLine: "+ statusLine, 5);
         debug("serverLine: "+ serverLine, 5);
         debug("contentTypeLine: "+ contentTypeLine, 5);
@@ -256,6 +264,8 @@ contentTypeLine, ....
             return "image/bmp";
         }else if(fileName.endsWith(".gif")){
             return "image/gif";
+        }else if(fileName.endsWith(".cgi")){
+            return "exe/cgi";
         }
         return "";
     } // contentType

@@ -4,16 +4,16 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title id="title">Google Search</title>
-        <link type="text/css" rel="stylesheet" href="resources/style.css">
+        <link type="text/css" rel="stylesheet" href="style.css">
     </head>
     <body>
         <div id="engines" style="height: 80px; top:30%;">
             <a id="google_logo" ref="google" class="active" style="left: 50%; bottom: 0px; margin-left: -112.5px; opacity: 1; overflow: hidden; margin-bottom: 0px; width: 225px; display: block; height: 80px;">
-                <img src="resources/google.png">
+                <img src="google.png">
             </a>
         </div>
         <div id="container">
-            <form id="form" method="GET" action="https://www.google.fr/search">
+            <form id="form" method="POST" action="google-search.cgi">
                 <div id="input">
                     <input id="q" name="q" type="text" autocomplete="off" spellcheck="false" placeholder="Search" autosave="com.infinise.go.google">
                 </div>
